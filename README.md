@@ -56,21 +56,28 @@ A secure, robust FastAPI-based two-factor authentication system that provides en
 
 ## 📥 Installation
 
-1. Clone the repository:
-```bash
-git clone https://github.com/EmmyAnieDev/2FASecureGuard.git
-cd 2FASecureGuard
-```
+1. **Create a virtual environment**:  
 
-2. Create and activate a virtual environment:
-```bash
-python -m venv .venv
-source .venv/bin/activate  # On Windows: .venv\Scripts\activate
-```
+   ```sh
+   python3 -m venv .venv
+   ```
+
+2. **Activate the virtual environment**:  
+
+- On macOS/Linux:  
+
+     ```sh
+     source .venv/bin/activate
+     ```
+
+- On Windows (PowerShell):  
+
+     ```sh
+     .venv\Scripts\Activate
 
 3. Install the required dependencies:
 ```bash
-pip install -r requirements.txt
+pip install -r requirments.txt
 ```
 
 4. Set up environment variables (copy from .env.example):
