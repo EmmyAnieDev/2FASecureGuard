@@ -24,10 +24,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+APP_PORT = 8000
 
 @app.get('/')
 async def sever_health():
-    return {"message: api is running"}
+    return {f"message: api is running in port {8000}..."}
 
 app.include_router(auth_router, prefix=f'/api/v1/auth', tags=['auth'])
 

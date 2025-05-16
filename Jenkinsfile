@@ -13,7 +13,7 @@ pipeline {
         INSTANCE_USER = credentials('INSTANCE_USER')
 
         // Directory on the EC2 server where the app will be deployed
-        DEPLOY_DIR = '/home/ec2-user/2FASecureGuard'
+        DEPLOY_DIR = '/home/${INSTANCE_USER}/2FASecureGuard'
     }
 
     stages {
@@ -25,11 +25,10 @@ pipeline {
         }
 
         stage('Init') {
-
-            // Determine if the build is for a Pull Request (PR)
             steps {
                 script {
-                    IS_PR = env.CHANGE_ID ? true : false
+                    // We're always working on main branch directly
+                    echo "Working on main branch, direct push workflow"
                 }
             }
         }
@@ -44,6 +43,7 @@ pipeline {
                     . ${VENV}/bin/activate
                     pip install --upgrade pip
                     pip install -r requirements.txt
+                    pip freeze > requirements.lock
                 """
             }
         }
@@ -75,12 +75,6 @@ pipeline {
                 always {
                     junit allowEmptyResults: true, testResults: 'test-reports/results.xml'
                     publishCoverage adapters: [coberturaAdapter(path: 'coverage.xml')]
-                    script {
-                        if (env.CHANGE_ID) {
-                            def comment = "Test Results: ${currentBuild.currentResult}"
-                            pullRequest.comment(comment)
-                        }
-                    }
                 }
             }
         }
@@ -93,46 +87,59 @@ pipeline {
                 sh """
                     . ${VENV}/bin/activate
                     pip install build
+                    rm -rf dist/  # Clean previous artifacts to avoid cached wheel files
                     python -m build
                 """
             }
         }
 
         stage('Deploy') {
-            // Only deploy on PRs or on main branch
+            // Always deploy since we're working directly on main without PRs
             when {
-                anyOf {
-                    branch 'main'
-                    expression { return env.CHANGE_ID != null }
-                }
+                expression { return true }  // Always run the deploy stage
             }
             steps {
-                echo "Deploying built package to server at ${INSTANCE_HOST}..."
+                echo "Deploying source code and built package to server ..."
 
-                // Use Jenkins SSH Publisher plugin to transfer files and run commands remotely
-                sshPublisher(
-                    publishers: [
-                        sshPublisherDesc(
-                            configName: 'instance-ssh', // Defined in Jenkins global config
-                            transfers: [
-                                sshTransfer(
-                                    sourceFiles: 'dist/*', // The built .whl or .tar.gz packages
-                                    remoteDirectory: "${DEPLOY_DIR}", // Target directory on EC2
-                                    execCommand: """
-                                        # Activate virtualenv on remote server
-                                        . ${DEPLOY_DIR}/venv/bin/activate
+                // Ensure SSH keys are properly set up
+                sshagent(['instance-ssh-credentials']) {  // Replace with your SSH credentials ID
+                    sh """
+                        # Create deploy directory if it doesn't exist
+                        ssh ${INSTANCE_USER}@${INSTANCE_HOST} "mkdir -p ${DEPLOY_DIR}"
 
-                                        # Install the uploaded package
-                                        pip install ${DEPLOY_DIR}/*.whl
+                        # Create a temporary tar of the source code (excluding unnecessary files)
+                        tar --exclude="venv" --exclude=".git" --exclude="__pycache__" --exclude="*.pyc" -czf deploy-source.tar.gz .
 
-                                        # Restart the application (if configured as a systemd service)
-                                        sudo systemctl restart myapp.service || echo "Service restart failed or not configured"
-                                    """
-                                )
-                            ]
-                        )
-                    ]
-                )
+                        # Copy the source code and package files to the server
+                        scp deploy-source.tar.gz dist/2fasecureguard-*.whl requirements.lock ${INSTANCE_USER}@${INSTANCE_HOST}:${DEPLOY_DIR}/
+
+                        # Extract the source code on the server
+                        ssh ${INSTANCE_USER}@${INSTANCE_HOST} "cd ${DEPLOY_DIR} && tar -xzf deploy-source.tar.gz && rm deploy-source.tar.gz"
+
+                        # Install and restart on the server
+                        ssh ${INSTANCE_USER}@${INSTANCE_HOST} "
+                            # Activate virtualenv on remote server (create if it doesn't exist)
+                            if [ ! -d ${DEPLOY_DIR}/venv ]; then
+                                python3 -m venv ${DEPLOY_DIR}/venv
+                            fi
+                            . ${DEPLOY_DIR}/venv/bin/activate
+
+                            # Install the uploaded package
+                            pip install --upgrade pip
+                            pip install -r ${DEPLOY_DIR}/requirements.lock
+                            pip install --force-reinstall ${DEPLOY_DIR}/*.whl
+
+                            # Restart the application (if configured as a systemd service)
+                            if systemctl is-active --quiet 2fasecureguard.service; then
+                                sudo systemctl restart 2fasecureguard.service
+                                sudo systemctl status 2fasecureguard.service --no-pager
+                            else
+                                echo 'Service not running or not configured'
+                                exit 1  # Fail the pipeline if service is not running
+                            fi
+                        "
+                    """
+                }
             }
         }
     }
@@ -148,23 +155,11 @@ pipeline {
         }
 
         success {
-            // Notify on success, especially if it’s a PR
             echo 'Build succeeded!'
-            script {
-                if (env.CHANGE_ID) {
-                    pullRequest.comment("✅ All checks passed! Ready for review and merge.")
-                }
-            }
         }
 
         failure {
-            // Notify on failure for visibility in the PR
             echo 'Build failed!'
-            script {
-                if (env.CHANGE_ID) {
-                    pullRequest.comment("❌ Build failed. Please check the logs and fix the issues.")
-                }
-            }
         }
     }
 }
