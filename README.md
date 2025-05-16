@@ -77,7 +77,7 @@ A secure, robust FastAPI-based two-factor authentication system that provides en
 
 3. Install the required dependencies:
 ```bash
-pip install -r requirments.txt
+pip install -r requirements.txt
 ```
 
 4. Set up environment variables (copy from .env.example):
