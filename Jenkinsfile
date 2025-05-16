@@ -64,20 +64,17 @@ pipeline {
         stage('Test') {
             steps {
                 echo 'Running tests with pytest and generating coverage report...'
-
-                // Activate virtualenv, install testing tools, run tests with coverage
                 sh """
                     . ${VENV}/bin/activate
-                    pytest
+                    pip install pytest pytest-cov
+                    mkdir -p test-reports
+                    pytest --junitxml=test-reports/results.xml --cov=. --cov-report=xml:coverage.xml
                 """
             }
             post {
                 always {
-                    // Publish test results and coverage report to Jenkins
-                    junit allowEmptyResults: true, testResults: '**/test-results/*.xml'
-                    publishCoverage adapters: [cobertura('**/coverage.xml')]
-
-                    // Update PR status if this is a PR
+                    junit allowEmptyResults: true, testResults: 'test-reports/results.xml'
+                    publishCoverage adapters: [coberturaAdapter(path: 'coverage.xml')]
                     script {
                         if (env.CHANGE_ID) {
                             def comment = "Test Results: ${currentBuild.currentResult}"
