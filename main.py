@@ -27,7 +27,7 @@ app.add_middleware(
 
 @app.get('/')
 async def sever_health():
-    return {"message: server is active"}
+    return {"message: api is running"}
 
 app.include_router(auth_router, prefix=f'/api/v1/auth', tags=['auth'])
 
