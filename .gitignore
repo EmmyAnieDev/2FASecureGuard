@@ -5,3 +5,7 @@ app.db
 .python-version
 2FASecureGuard.egg-info
 test_venv
+__pycache__/
+build/
+*.egg
+*.db

@@ -3,7 +3,7 @@ import qrcode
 import io
 import base64
 from sqlalchemy.orm import Session
-import models
+from app import models
 
 
 def generate_totp_secret():

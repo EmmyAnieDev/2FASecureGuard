@@ -13,7 +13,7 @@ pipeline {
         INSTANCE_USER = credentials('INSTANCE_USER')
 
         // Directory on the EC2 server where the app will be deployed
-        DEPLOY_DIR = '/home/${INSTANCE_USER}/2FASecureGuard'
+        DEPLOY_DIR = "/home/${INSTANCE_USER}/2FASecureGuard"
     }
 
     stages {

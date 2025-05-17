@@ -3,14 +3,13 @@ from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
-import os
 
 from main import app
-from database import Base, get_db
-from models import User
+from app.database import Base, get_db
+from app.models import User
 from utils.totp import setup_totp_device
-import schemas
-from auth import get_current_user
+from app import schemas
+from app.routes.auth import get_current_user
 from fastapi import Depends
 
 # Create in-memory SQLite database for testing
@@ -63,7 +62,7 @@ def client():
 def test_user():
     db = TestingSessionLocal()
     user_data = schemas.UserCreate(email="test@example.com", password="testpassword")
-    from auth import get_password_hash
+    from app.routes.auth import get_password_hash
     hashed_password = get_password_hash(user_data.password)
     db_user = User(email=user_data.email, hashed_password=hashed_password)
     db.add(db_user)

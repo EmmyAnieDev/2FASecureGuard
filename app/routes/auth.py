@@ -5,9 +5,9 @@ from datetime import datetime, timedelta
 from sqlalchemy.orm import Session
 from typing import Optional
 
-import models
+from app import models
 from config import *
-from database import get_db
+from app.database import get_db
 
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")

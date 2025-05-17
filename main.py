@@ -1,12 +1,12 @@
 from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from database import engine
+from app.database import engine
 
-import models
+from app import models
 import uvicorn
 
-from routes import auth_router
+from app.routes.routes import auth_router
 
 # Create the database tables
 models.Base.metadata.create_all(bind=engine)

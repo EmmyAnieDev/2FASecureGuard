@@ -3,7 +3,7 @@ import pyotp
 import sys
 import os
 from unittest.mock import MagicMock, patch
-from datetime import datetime, timedelta
+from datetime import datetime
 from sqlalchemy.orm import Session
 from jose import jwt
 from fastapi import HTTPException
@@ -11,13 +11,13 @@ from fastapi import HTTPException
 # Add the project root directory to Python path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-import models
+from app import models
 from utils.totp import (
     generate_totp_secret, get_totp_uri, generate_qr_code, verify_totp,
     setup_totp_device, confirm_totp_device, disable_totp,
     requires_totp, validate_login_totp
 )
-from auth import (
+from app.routes.auth import (
     verify_password, get_password_hash, get_user, authenticate_user,
     create_access_token, get_current_user
 )
@@ -314,7 +314,7 @@ def test_get_user(mock_db, mock_user):
     mock_db.query.assert_called_once_with(models.User)
 
 
-@patch('auth.verify_password')
+@patch('app.routes.auth.verify_password')
 def test_authenticate_user_valid(mock_verify_password, mock_db, mock_user):
     """Test user authentication with valid credentials"""
     mock_verify_password.return_value = True
@@ -325,7 +325,7 @@ def test_authenticate_user_valid(mock_verify_password, mock_db, mock_user):
     assert result == mock_user
 
 
-@patch('auth.verify_password')
+@patch('app.routes.auth.verify_password')
 def test_authenticate_user_invalid_password(mock_verify_password, mock_db, mock_user):
     """Test user authentication with invalid password"""
     mock_verify_password.return_value = False
@@ -345,8 +345,8 @@ def test_authenticate_user_nonexistent(mock_db):
     assert result is False
 
 
-@patch('auth.jwt.encode')
-@patch('auth.datetime')
+@patch('app.routes.auth.jwt.encode')
+@patch('app.routes.auth.datetime')
 def test_create_access_token(mock_datetime, mock_jwt_encode):
     """Test access token creation"""
     # Setup
@@ -362,7 +362,7 @@ def test_create_access_token(mock_datetime, mock_jwt_encode):
     assert mock_jwt_encode.called
 
 
-@patch('auth.jwt.decode')
+@patch('app.routes.auth.jwt.decode')
 def test_get_current_user_valid(mock_jwt_decode, mock_db, mock_user):
     """Test getting current user with valid token"""
     # Setup
@@ -377,7 +377,7 @@ def test_get_current_user_valid(mock_jwt_decode, mock_db, mock_user):
     assert mock_jwt_decode.called
 
 
-@patch('auth.jwt.decode')
+@patch('app.routes.auth.jwt.decode')
 def test_get_current_user_invalid_token(mock_jwt_decode, mock_db):
     """Test getting current user with invalid token"""
     # Setup
@@ -391,7 +391,7 @@ def test_get_current_user_invalid_token(mock_jwt_decode, mock_db):
     assert "Could not validate credentials" in exc_info.value.detail
 
 
-@patch('auth.jwt.decode')
+@patch('app.routes.auth.jwt.decode')
 def test_get_current_user_missing_email(mock_jwt_decode, mock_db):
     """Test getting current user with token missing email"""
     # Setup
@@ -405,7 +405,7 @@ def test_get_current_user_missing_email(mock_jwt_decode, mock_db):
     assert "Could not validate credentials" in exc_info.value.detail
 
 
-@patch('auth.jwt.decode')
+@patch('app.routes.auth.jwt.decode')
 def test_get_current_user_user_not_found(mock_jwt_decode, mock_db):
     """Test getting current user when user not found in database"""
     # Setup
