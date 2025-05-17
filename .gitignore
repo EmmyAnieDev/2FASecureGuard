@@ -1,1 +1,7 @@
 .env
+.venv
+.idea
+app.db
+.python-version
+2FASecureGuard.egg-info
+test_venv
